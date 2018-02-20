@@ -22,9 +22,13 @@ import os
 import argparse
 import ssl
 import datetime
+import csv
+import pandas as pd
 
 # Taking command line arguments from users
 parser = argparse.ArgumentParser()
+parser.add_argument('-csv', '--csv', help='save links to csv instead of downloading images', type=str, required=False,
+                    choices=['true', 'false'])
 parser.add_argument('-k', '--keywords', help='delimited list input', type=str, required=False)
 parser.add_argument('-sk', '--suffix_keywords', help='comma separated additional words added to main keyword', type=str, required=False)
 parser.add_argument('-l', '--limit', help='delimited list input', type=str, required=False)
@@ -320,70 +324,76 @@ def bulk_download(search_keyword,suffix_keywords,limit,main_directory,delay_time
                 print('***** This search result did not return any results...please try a different search filter *****')
                 break
 
-            print("Starting Download...")
-
-            k = 0
-            success_count = 0
-            while (k < len(items)):
-                try:
-                    image_url = items[k]
-                    #print("\n" + str(image_url))
-                    req = Request(image_url, headers={
-                        "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
-                    response = urlopen(req, None, 15)
-                    image_name = str(items[k][(items[k].rfind('/')) + 1:])
-                    if '?' in image_name:
-                        image_name = image_name[:image_name.find('?')]
-                    if ".jpg" in image_name or ".JPG" in image_name or ".gif" in image_name or ".png" in image_name or ".bmp" in image_name or ".svg" in image_name or ".webp" in image_name or ".ico" in image_name:
-                        output_file = open(main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name, 'wb')
-                    else:
-                        if args.format:
-                            output_file = open(
-                                main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name + "." + args.format,
-                                'wb')
-                            image_name = image_name + "." + args.format
+            if args.csv=='true':
+                  file_name = os.path.join(main_directory,dir_name,"image_urls.csv")
+                  print("Saving image urls to = ",file_name)
+                  items = pd.DataFrame(items, columns=['Image_Urls'])
+                  items.to_csv(file_name, index=False)
+                  return 0
+            else:
+                print("Starting Download...")
+                k = 0
+                success_count = 0
+                while (k < len(items)):
+                    try:
+                        image_url = items[k]
+                        #print("\n" + str(image_url))
+                        req = Request(image_url, headers={
+                            "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
+                        response = urlopen(req, None, 15)
+                        image_name = str(items[k][(items[k].rfind('/')) + 1:])
+                        if '?' in image_name:
+                            image_name = image_name[:image_name.find('?')]
+                        if ".jpg" in image_name or ".JPG" in image_name or ".gif" in image_name or ".png" in image_name or ".bmp" in image_name or ".svg" in image_name or ".webp" in image_name or ".ico" in image_name:
+                            output_file = open(main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name, 'wb')
                         else:
-                            output_file = open(
-                                main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name + ".jpg", 'wb')
-                            image_name = image_name + ".jpg"
+                            if args.format:
+                                output_file = open(
+                                    main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name + "." + args.format,
+                                    'wb')
+                                image_name = image_name + "." + args.format
+                            else:
+                                output_file = open(
+                                    main_directory + "/" + dir_name + "/" + str(success_count + 1) + ". " + image_name + ".jpg", 'wb')
+                                image_name = image_name + ".jpg"
 
-                    data = response.read()
-                    output_file.write(data)
-                    response.close()
+                        data = response.read()
+                        output_file.write(data)
+                        response.close()
 
-                    print("Completed ====> " + str(success_count + 1) + ". " + image_name)
-                    k = k + 1
-                    success_count += 1
-                    if success_count == limit:
-                        break
+                        print("Completed ====> " + str(success_count + 1) + ". " + image_name)
+                        k = k + 1
+                        success_count += 1
+                        if success_count == limit:
+                            break
 
-                except HTTPError as e:  # If there is any HTTPError
-                    errorCount += 1
-                    print("HTTPError on an image...trying next one..." + " Error: " + str(e))
-                    k = k + 1
+                    except HTTPError as e:  # If there is any HTTPError
+                        errorCount += 1
+                        print("HTTPError on an image...trying next one..." + " Error: " + str(e))
+                        k = k + 1
 
-                except URLError as e:
-                    errorCount += 1
-                    print("URLError on an image...trying next one..." + " Error: " + str(e))
-                    k = k + 1
+                    except URLError as e:
+                        errorCount += 1
+                        print("URLError on an image...trying next one..." + " Error: " + str(e))
+                        k = k + 1
 
-                except ssl.CertificateError as e:
-                    errorCount += 1
-                    print("CertificateError on an image...trying next one..." + " Error: " + str(e))
-                    k = k + 1
+                    except ssl.CertificateError as e:
+                        errorCount += 1
+                        print("CertificateError on an image...trying next one..." + " Error: " + str(e))
+                        k = k + 1
 
-                except IOError as e:  # If there is any IOError
-                    errorCount += 1
-                    print("IOError on an image...trying next one..." + " Error: " + str(e))
-                    k = k + 1
+                    except IOError as e:  # If there is any IOError
+                        errorCount += 1
+                        print("IOError on an image...trying next one..." + " Error: " + str(e))
+                        k = k + 1
 
-                if args.delay:
-                    time.sleep(int(delay_time))
+                    if args.delay:
+                        time.sleep(int(delay_time))
 
-            if success_count < limit:
-                print("\n\nUnfortunately all " + str(limit) + " could not be downloaded because some images were not downloadable. " + str(success_count) + " is all we got for this search filter!")
-            i = i + 1
-    return errorCount
+                if success_count < limit:
+                    print("\n\nUnfortunately all " + str(limit) + " could not be downloaded because some images were not downloadable. " + str(success_count) + " is all we got for this search filter!")
+                i = i + 1
+            return errorCount
 
 #------------- Main Program -------------#
 if args.single_image:       #Download Single Image using a URL

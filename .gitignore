@@ -1,0 +1,5 @@
+
+*.csv
+.vs/google-images-download/v15/.suo
+*.pyproj
+*.sln
