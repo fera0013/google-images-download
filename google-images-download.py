@@ -70,8 +70,6 @@ else:
 # Setting limit on number of images to be downloaded
 if args.limit:
     limit = int(args.limit)
-    if int(args.limit) >= 100:
-        limit = 100
 else:
     limit = 100
 
